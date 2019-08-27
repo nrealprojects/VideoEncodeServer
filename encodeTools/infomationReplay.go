@@ -1,8 +1,6 @@
 package main
 
-import (
-	"projects/encodeImages/models"
-)
+import "projects/VideoEncodeServer/models"
 
 // BinarySearch : binary search,
 func BinarySearch(arr []models.SlamPose, low int, high int, key uint64) int {

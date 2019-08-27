@@ -8,8 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"projects/encodeImages/fileUtils"
-	"projects/encodeImages/models"
+	"projects/VideoEncodeServer/fileUtils"
+	"projects/VideoEncodeServer/models"
 	"strconv"
 	"strings"
 )

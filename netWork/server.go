@@ -7,12 +7,13 @@ import (
 	"io/ioutil"
 	"net"
 	"path/filepath"
-	"projects/encodeImages/fileUtils"
+	"projects/VideoEncodeServer/fileUtils"
 	"time"
 )
 
 var (
-	recChanel = make(chan []byte, 1024*1024)
+	recChanel     = make(chan []byte, 1024*1024)
+	packageChanel = make(chan []PackData, 1024*1024)
 	// ResBasePath : Resource Base Path
 	ResBasePath = `C:\Users\nreal\Desktop\RecordRes\NetImages\input\`
 )
@@ -22,7 +23,8 @@ func main() {
 	tcpServer, _ := net.ResolveTCPAddr("tcp4", ":6000")
 	listener, _ := net.ListenTCP("tcp", tcpServer)
 
-	go Encode(recChanel)
+	go ReciveMsg(recChanel)
+	go Encode(CompletPackageCh)
 
 	for {
 		fmt.Println("start a connect!")
