@@ -59,5 +59,61 @@ func (p *PackData) ReadOnePack(data []byte) {
 
 // ToString : ToString
 func (p *PackData) ToString() string {
-	return fmt.Sprintf("datasize: %d cursize: %d is last pak:%d ", p.Data, len(p.Data), p.IsLastPack)
+	return fmt.Sprintf("datasize: %d cursize: %d is last pak:%d ", p.DataSize, len(p.Data), p.IsLastPack)
+}
+
+// ToBytes : to bytes
+func (p *PackData) ToBytes() []byte {
+	var buffer bytes.Buffer
+	buffer.Write(IntToBytes(p.DataSize))
+	buffer.Write(IntToBytes(p.CurSize))
+	buffer.Write(IntToBytes(p.IsLastPack))
+	buffer.Write(p.Data)
+	return buffer.Bytes()
+}
+
+// IntToBytes : int to bytes
+func IntToBytes(n int) []byte {
+	x := int32(n)
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.LittleEndian, x)
+	return bytesBuffer.Bytes()
+}
+
+// FrameData :
+type FrameData struct {
+	Imagetype int    //數據大小
+	TimeStamp uint64 //當前大小
+	Data      []byte //帧数据
+}
+
+// ToBytes : to bytes
+func (p *FrameData) ToBytes() []byte {
+	var buffer bytes.Buffer
+	buffer.Write(IntToBytes(p.Imagetype))
+	buffer.Write(UInt64ToBytes(p.TimeStamp))
+	buffer.Write(p.Data)
+	return buffer.Bytes()
+}
+
+// ToString : ToString
+func (p *FrameData) ToString() string {
+	return fmt.Sprintf("Imagetype: %d TimeStamp: %d Data len:%d ", p.Imagetype, p.TimeStamp, len(p.Data))
+}
+
+// BytesToFrame : Bytes To Frame
+func BytesToFrame(data []byte) FrameData {
+	var frame FrameData
+	binbuf := bytes.NewBuffer(data[0:4])
+	binary.Read(binbuf, binary.LittleEndian, &(frame.Imagetype))
+	frame.TimeStamp = uint64(binary.LittleEndian.Uint64(data[4:12]))
+	frame.Data = data[12:(len(data))]
+	return frame
+}
+
+// UInt64ToBytes : uint64 to bytes
+func UInt64ToBytes(i uint64) []byte {
+	var buf = make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, i)
+	return buf
 }
