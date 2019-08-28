@@ -6,18 +6,15 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
-	"projects/encodeImages/fileUtils"
+	"projects/VideoEncodeServer/fileUtils"
 	"strings"
 )
 
 var (
-	// ImageBasePath : image base path
-	ImageBasePath = `C:\Users\nreal\Desktop\RecordRes\RecordImages\RGB`
 	// ToolPath : encode tool path
-	ToolPath = `C:\Users\nreal\go\src\projects\encodeImages\encodeTools`
-	// outPutFile : image base path
-	// outPutFile       = `C:\Users\nreal\Desktop\RecordRes`
-	outPutImagesPath = `C:\Users\nreal\Desktop\RecordRes\NetImages\`
+	ToolPath = `C:\Users\nreal\go\src\projects\VideoEncodeServer\encodeTools`
+	// BlackList : BlackList
+	BlackList = make(map[string]int, 0)
 )
 
 func genVideoByImages(input string, output string) {
@@ -31,12 +28,18 @@ func genVideoByImages(input string, output string) {
 
 	var buffer bytes.Buffer
 	var line string
+	totalline := 0
 	for _, item := range files {
-		itempath := filepath.Join(input, item)
-		line = fmt.Sprintf("file '%s'\n", itempath)
-		buffer.WriteString(line)
-		buffer.WriteString("duration 1\n")
+		_, exist := BlackList[item]
+		if !exist {
+			itempath := filepath.Join(input, item)
+			line = fmt.Sprintf("file '%s'\n", itempath)
+			buffer.WriteString(line)
+			buffer.WriteString("duration 1\n")
+			totalline++
+		}
 	}
+	fmt.Println("Total line:", totalline)
 	buffer.WriteString(line)
 
 	filename := "RGB"
@@ -49,7 +52,8 @@ func genVideoByImages(input string, output string) {
 	}
 
 	// defer fmt.Println(buffer.String())
-	videoInput := output + filename + "_input.txt"
+	fileUtils.EnsureFolderExist(output)
+	videoInput := filepath.Join(output, filename+"_input.txt")
 	fmt.Println(videoInput)
 	if ioutil.WriteFile(videoInput, buffer.Bytes(), 0644) == nil {
 		fmt.Println("Write to file success!")
@@ -100,10 +104,55 @@ func genVideoByInput(input string, output string, flip bool) {
 	}
 }
 
+func kickIllegalPicture(rgbinput, virtualinput string) {
+	rgbfiles, err := fileUtils.GetAllFile(rgbinput)
+	if err != nil {
+		fmt.Println("Get all files err:", err)
+		return
+	}
+	virtualfiles, err := fileUtils.GetAllFile(virtualinput)
+	if err != nil {
+		fmt.Println("Get all files err:", err)
+		return
+	}
+
+	for _, rgb := range rgbfiles {
+		result := false
+		for _, virtual := range virtualfiles {
+			if rgb == virtual {
+				result = true
+				break
+			}
+		}
+
+		if !result {
+			BlackList[rgb] = 0
+			// 	fmt.Println("can not find rgb file:", rgb, " in virtual")
+		}
+	}
+
+	for _, virtual := range virtualfiles {
+		result := false
+		for _, rgb := range rgbfiles {
+			if rgb == virtual {
+				result = true
+				break
+			}
+		}
+		if !result {
+			BlackList[virtual] = 1
+			// 	fmt.Println("can not find virtual file:", virtual, " in rgb")
+		}
+	}
+
+	fmt.Println("Black list count:", len(BlackList))
+}
+
 // Do : Encode the input images to output
 func Do(input string, output string) {
 	rgbinput := filepath.Join(input, "RGB")
 	virtualinput := filepath.Join(input, "Virtual")
+	kickIllegalPicture(rgbinput, virtualinput)
 	genVideoByImages(rgbinput, output)
 	genVideoByImages(virtualinput, output)
 }

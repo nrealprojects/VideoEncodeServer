@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
@@ -66,9 +65,7 @@ func Encode(c chan []byte) {
 	for {
 		select {
 		case data := <-c:
-			var imagetype int32
-			binbuf := bytes.NewBuffer(data[0:4])
-			binary.Read(binbuf, binary.LittleEndian, &imagetype)
+			imagetype := BytesToInt(data[0:4])
 			timestamp := uint64(binary.LittleEndian.Uint64(data[4:12]))
 			folder := "RGB"
 			if imagetype == 0 {
@@ -87,7 +84,7 @@ func Encode(c chan []byte) {
 			}
 			imageSavepath := filepath.Join(newPath, fmt.Sprintf("%s\\%d.jpg", folder, timestamp))
 			ioutil.WriteFile(imageSavepath, data[12:len(data)], 0644)
-			fmt.Println("encode a image:", folder, " ", timestamp)
+			// fmt.Println("encode a image:", folder, " ", timestamp)
 			// if writeErr == nil {
 			// 	fmt.Println("Save a client screen shot image success!", imageSavepath)
 			// } else {

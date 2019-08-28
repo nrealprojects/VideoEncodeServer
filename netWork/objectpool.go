@@ -47,19 +47,25 @@ func (p *PackData) Init(datasize int) {
 
 // ReadOnePack : read one pack
 func (p *PackData) ReadOnePack(data []byte) {
-	var pack PackData
-	datasizebuf := bytes.NewBuffer(data[0:4])
-	binary.Read(datasizebuf, binary.LittleEndian, &pack.DataSize)
-	cursizebuf := bytes.NewBuffer(data[4:8])
-	binary.Read(cursizebuf, binary.LittleEndian, &pack.CurSize)
-	lastpackbuf := bytes.NewBuffer(data[8:12])
-	binary.Read(lastpackbuf, binary.LittleEndian, &pack.IsLastPack)
-	pack.Data = data[12:(len(data) - 12)]
+	// fmt.Println(" start to read one pack data len:", len(data))
+	p.DataSize = BytesToInt(data[0:4])
+	p.CurSize = BytesToInt(data[4:8])
+	p.IsLastPack = BytesToInt(data[8:12])
+	p.Data = data[12:(len(data))]
+	// fmt.Println("data len:", len(data), "this pack is :", p.ToString())
 }
 
 // ToString : ToString
 func (p *PackData) ToString() string {
-	return fmt.Sprintf("datasize: %d cursize: %d is last pak:%d ", p.DataSize, len(p.Data), p.IsLastPack)
+	return fmt.Sprintf("totalsize: %d cursize: %d datasize:%d is last pak:%d", p.DataSize, p.CurSize, len(p.Data), p.IsLastPack)
+}
+
+// BytesToInt : BytesToInt
+func BytesToInt(b []byte) int {
+	bytesBuffer := bytes.NewBuffer(b)
+	var x int32
+	binary.Read(bytesBuffer, binary.LittleEndian, &x)
+	return int(x)
 }
 
 // ToBytes : to bytes
@@ -104,8 +110,7 @@ func (p *FrameData) ToString() string {
 // BytesToFrame : Bytes To Frame
 func BytesToFrame(data []byte) FrameData {
 	var frame FrameData
-	binbuf := bytes.NewBuffer(data[0:4])
-	binary.Read(binbuf, binary.LittleEndian, &(frame.Imagetype))
+	frame.Imagetype = BytesToInt(data[0:4])
 	frame.TimeStamp = uint64(binary.LittleEndian.Uint64(data[4:12]))
 	frame.Data = data[12:(len(data))]
 	return frame
@@ -114,6 +119,6 @@ func BytesToFrame(data []byte) FrameData {
 // UInt64ToBytes : uint64 to bytes
 func UInt64ToBytes(i uint64) []byte {
 	var buf = make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, i)
+	binary.LittleEndian.PutUint64(buf, i)
 	return buf
 }
