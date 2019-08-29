@@ -19,7 +19,8 @@ func reciveMsg(ch chan []byte) {
 		case data := <-ch:
 			count := len(data) / dataSizePerFrame
 			if len(data)%dataSizePerFrame != 0 {
-				count++
+				fmt.Println("data is not full:", len(data))
+				continue
 			}
 			// fmt.Println("Read a pack len:", len(data), " count is:", count)
 			for i := 0; i < count; i++ {

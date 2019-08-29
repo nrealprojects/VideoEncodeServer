@@ -51,7 +51,7 @@ func (p *PackData) ReadOnePack(data []byte) {
 	p.DataSize = BytesToInt(data[0:4])
 	p.CurSize = BytesToInt(data[4:8])
 	p.IsLastPack = BytesToInt(data[8:12])
-	p.Data = data[12:(len(data))]
+	p.Data = data[12:(p.CurSize + 12)]
 	// fmt.Println("data len:", len(data), "this pack is :", p.ToString())
 }
 
