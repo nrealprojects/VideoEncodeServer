@@ -18,10 +18,9 @@ var (
 )
 
 func genVideoByImages(input string, output string) {
-	//outPutImagesPath + "RGB"
 	//gen video input file
 	files, err := fileUtils.GetAllFile(input)
-	if err != nil {
+	if err != nil || files == nil || len(files) == 0 {
 		fmt.Println("Get all files err:", err)
 		return
 	}
@@ -80,10 +79,12 @@ func genVideoByInput(input string, output string, flip bool) {
 	var videoFile string
 	var videoFlipFile string
 	if flip {
-		videoFile = filepath.Join(output, "RGB.mp4")
-		videoFlipFile = filepath.Join(output, "RGB_flip.mp4")
-	} else {
+		videoFile = filepath.Join(output, "backgound_temp.mp4")
+		videoFlipFile = filepath.Join(output, "backgound.mp4")
+	} else if strings.Contains(input, "Virtual") {
 		videoFile = filepath.Join(output, "Virtual.mp4")
+	} else if strings.Contains(input, "Unknow") {
+		videoFile = filepath.Join(output, "Unknow.mp4")
 	}
 
 	//delet old output.mp4
@@ -106,13 +107,13 @@ func genVideoByInput(input string, output string, flip bool) {
 
 func kickIllegalPicture(rgbinput, virtualinput string) {
 	rgbfiles, err := fileUtils.GetAllFile(rgbinput)
-	if err != nil {
-		fmt.Println("Get all files err:", err)
+	if err != nil || rgbfiles == nil || len(rgbfiles) == 0 {
+		fmt.Println("Can not get any files:", err, " in path:", rgbinput)
 		return
 	}
 	virtualfiles, err := fileUtils.GetAllFile(virtualinput)
 	if err != nil {
-		fmt.Println("Get all files err:", err)
+		fmt.Println("Can not get any files:", err, " in path:", virtualinput)
 		return
 	}
 
@@ -148,11 +149,22 @@ func kickIllegalPicture(rgbinput, virtualinput string) {
 	fmt.Println("Black list count:", len(BlackList))
 }
 
-// Do : Encode the input images to output
-func Do(input string, output string) {
-	rgbinput := filepath.Join(input, "RGB")
-	virtualinput := filepath.Join(input, "Virtual")
-	kickIllegalPicture(rgbinput, virtualinput)
-	genVideoByImages(rgbinput, output)
-	genVideoByImages(virtualinput, output)
+// Start : Encode the input images to output
+func Start(inputCh chan string, input string, output string) {
+	fmt.Println("Start encode thread....")
+	for {
+		select {
+		case newfolder := <-inputCh:
+			fmt.Println("Encode a folder :", newfolder)
+			newinputPath := filepath.Join(input, newfolder)
+			newoutputPath := filepath.Join(output, newfolder)
+			rgbinput := filepath.Join(newinputPath, "RGB")
+			virtualinput := filepath.Join(newinputPath, "Virtual")
+			uknowinput := filepath.Join(newinputPath, "Unknow")
+			kickIllegalPicture(rgbinput, virtualinput)
+			genVideoByImages(rgbinput, newoutputPath)
+			genVideoByImages(virtualinput, newoutputPath)
+			genVideoByImages(uknowinput, newoutputPath)
+		}
+	}
 }

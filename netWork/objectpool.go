@@ -1,4 +1,4 @@
-package main
+package imageserver
 
 import (
 	"bytes"
@@ -16,15 +16,15 @@ var (
 // Get : get a new packdata
 func Get() PackData {
 	v := bufPool.Get()
+	var pack PackData
 	if v == nil {
 		//若不存在buf，创建新的
-		var pack PackData
 		pack.Init(PackageSize)
-		return pack
 	} else {
 		// 池里存在buf,v这里是interface{}，需要做类型转换
-		return v.(PackData)
+		pack = v.(PackData)
 	}
+	return pack
 }
 
 // Put : Put a new packdata

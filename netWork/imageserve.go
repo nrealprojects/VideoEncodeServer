@@ -1,4 +1,4 @@
-package main
+package imageserver
 
 import (
 	"encoding/binary"
@@ -13,17 +13,16 @@ import (
 var (
 	recChanel     = make(chan []byte, 1024*1024)
 	packageChanel = make(chan []PackData, 1024*1024)
-	// ResBasePath : Resource Base Path
-	ResBasePath = `C:\Users\nreal\Desktop\RecordRes\NetImages\input\`
 )
 
-//模拟server端
-func main() {
+// Start : 模拟server端
+func Start(encodech chan string, outputpath string) {
+	fmt.Println("Start image server....")
 	tcpServer, _ := net.ResolveTCPAddr("tcp4", ":6000")
 	listener, _ := net.ListenTCP("tcp", tcpServer)
 
-	go ReciveMsg(recChanel)
-	go Encode(CompletPackageCh)
+	go reciveMsg(recChanel)
+	go encode(CompletPackageCh, encodech, outputpath)
 
 	for {
 		fmt.Println("start a connect!")
@@ -57,10 +56,11 @@ func handle(conn net.Conn, c chan []byte) {
 	}()
 }
 
-// Encode : encode the receive data
-func Encode(c chan []byte) {
+// encode : encode the receive data
+func encode(c chan []byte, encode chan string, outputpath string) {
 	var clearZero uint64
 	var newPath string
+	var newfolder string
 	clearZero = 0
 	for {
 		select {
@@ -76,7 +76,9 @@ func Encode(c chan []byte) {
 				folder = "Unknow"
 			}
 			if clearZero == 0 {
-				newPath = ResBasePath + fmt.Sprintf("%d", timestamp)
+				// create a new folder
+				newfolder = createNewFolder()
+				newPath = filepath.Join(outputpath, fmt.Sprintf("/%s", newfolder))
 				fileUtils.EnsureFolderExist(newPath)
 				fileUtils.EnsureFolderExist(filepath.Join(newPath, "RGB"))
 				fileUtils.EnsureFolderExist(filepath.Join(newPath, "Virtual"))
@@ -84,17 +86,22 @@ func Encode(c chan []byte) {
 			}
 			imageSavepath := filepath.Join(newPath, fmt.Sprintf("%s\\%d.jpg", folder, timestamp))
 			ioutil.WriteFile(imageSavepath, data[12:len(data)], 0644)
-			// fmt.Println("encode a image:", folder, " ", timestamp)
-			// if writeErr == nil {
-			// 	fmt.Println("Save a client screen shot image success!", imageSavepath)
-			// } else {
-			// 	fmt.Println("Save a client screen shot image failed :", writeErr)
-			// }
 			clearZero = timestamp
 		case <-time.After(8 * time.Second):
-			fmt.Println("-------clear-------")
-			clearZero = 0
-		}
+			if clearZero != 0 {
+				fmt.Println("-------clear-------")
+				clearZero = 0
 
+				// add the new folder to encode thread
+				if newfolder != "" {
+					encode <- newfolder
+					newfolder = ""
+				}
+			}
+		}
 	}
+}
+
+func createNewFolder() string {
+	return time.Now().Format("2006-01-02-15-04-05")
 }

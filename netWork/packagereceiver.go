@@ -1,4 +1,4 @@
-package main
+package imageserver
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ var (
 )
 
 // ReciveMsg : 接收服务器数据
-func ReciveMsg(ch chan []byte) {
+func reciveMsg(ch chan []byte) {
 	packlist := make([]PackData, 0)
 	for {
 		select {
@@ -34,7 +34,7 @@ func ReciveMsg(ch chan []byte) {
 				if pack.IsLastPack == 1 {
 					// join the packlist to a full package and clear the packlist
 					packlist = append(packlist, pack)
-					fullpack := JoinPackData(packlist)
+					fullpack := joinPackData(packlist)
 					if fullpack != nil {
 						CompletPackageCh <- fullpack
 						// fmt.Println("Success get a full package.")
@@ -52,7 +52,7 @@ func ReciveMsg(ch chan []byte) {
 }
 
 // JoinPackData ：joint pack list
-func JoinPackData(list []PackData) []byte {
+func joinPackData(list []PackData) []byte {
 	// fmt.Println("JoinPackData list count:", len(list))
 	framesize := 0
 	var frameBuffer []byte
