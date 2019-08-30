@@ -52,7 +52,7 @@ func (p *PackData) ReadOnePack(data []byte) {
 	p.CurSize = BytesToInt(data[4:8])
 	p.IsLastPack = BytesToInt(data[8:12])
 	p.Data = data[12:(p.CurSize + 12)]
-	// fmt.Println("data len:", len(data), "this pack is :", p.ToString())
+	// fmt.Println("read a pack success. data len:", len(data), "this pack is :", p.ToString())
 }
 
 // ToString : ToString
@@ -91,6 +91,18 @@ type FrameData struct {
 	Imagetype int    //數據大小
 	TimeStamp uint64 //當前大小
 	Data      []byte //帧数据
+}
+
+// Init : Init
+func (p *FrameData) Init(data []byte) {
+	p.Imagetype = BytesToInt(data[0:4])
+	p.TimeStamp = uint64(binary.LittleEndian.Uint64(data[4:12]))
+	p.Data = data[12:len(data)]
+}
+
+// IsEndSignal : Is End Signal
+func (p *FrameData) IsEndSignal() bool {
+	return p.TimeStamp == 999 && p.Imagetype == 2 && len(p.Data) == 1
 }
 
 // ToBytes : to bytes

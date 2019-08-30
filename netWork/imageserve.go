@@ -1,7 +1,6 @@
 package imageserver
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -11,8 +10,7 @@ import (
 )
 
 var (
-	recChanel     = make(chan []byte, 1024*1024)
-	packageChanel = make(chan []PackData, 1024*1024)
+	recChanel = make(chan []byte, 1024*1024)
 )
 
 // Start : 模拟server端
@@ -42,7 +40,7 @@ func handle(conn net.Conn, c chan []byte) {
 	//读取客户端传送的消息
 	fmt.Println("a client has connected!!")
 	go func() {
-		data := make([]byte, 512*1024)
+		data := make([]byte, 1024*1024)
 		for {
 			i, err := conn.Read(data)
 			if err != nil {
@@ -57,36 +55,49 @@ func handle(conn net.Conn, c chan []byte) {
 }
 
 // encode : encode the receive data
-func encode(c chan []byte, encode chan string, outputpath string) {
+func encode(c chan FrameData, preEncoded chan string, outputpath string) {
 	var clearZero uint64
 	var newPath string
 	var newfolder string
 	clearZero = 0
 	for {
 		select {
-		case data := <-c:
-			imagetype := BytesToInt(data[0:4])
-			timestamp := uint64(binary.LittleEndian.Uint64(data[4:12]))
-			folder := "RGB"
-			if imagetype == 0 {
-				folder = "RGB"
-			} else if imagetype == 1 {
-				folder = "Virtual"
-			} else if imagetype == 2 {
-				folder = "Unknow"
+		case frame := <-c:
+			// if current frame is a end signal
+			// then add current folder to preencode listadb
+			if frame.IsEndSignal() {
+				if newfolder != "" {
+					fmt.Println("--------rec a end signal-------")
+					preEncoded <- newfolder
+					newfolder = ""
+					clearZero = 0
+				}
+			} else {
+				folder := "RGB"
+				if frame.Imagetype == 0 {
+					folder = "RGB"
+				} else if frame.Imagetype == 1 {
+					folder = "Virtual"
+				} else if frame.Imagetype == 2 {
+					folder = "Unknow"
+				}
+				if clearZero == 0 {
+					// create a new folder
+					newfolder = createNewFolder()
+					newPath = filepath.Join(outputpath, fmt.Sprintf("/%s", newfolder))
+					fileUtils.EnsureFolderExist(newPath)
+					fileUtils.EnsureFolderExist(filepath.Join(newPath, "RGB"))
+					fileUtils.EnsureFolderExist(filepath.Join(newPath, "Virtual"))
+					fileUtils.EnsureFolderExist(filepath.Join(newPath, "Unknow"))
+				}
+
+				imageSavepath := filepath.Join(newPath, fmt.Sprintf("%s\\%d.jpg", folder, frame.TimeStamp))
+				err := ioutil.WriteFile(imageSavepath, frame.Data, 0644)
+				if err != nil {
+					fmt.Println("Write image err:", err)
+				}
+				clearZero = frame.TimeStamp
 			}
-			if clearZero == 0 {
-				// create a new folder
-				newfolder = createNewFolder()
-				newPath = filepath.Join(outputpath, fmt.Sprintf("/%s", newfolder))
-				fileUtils.EnsureFolderExist(newPath)
-				fileUtils.EnsureFolderExist(filepath.Join(newPath, "RGB"))
-				fileUtils.EnsureFolderExist(filepath.Join(newPath, "Virtual"))
-				fileUtils.EnsureFolderExist(filepath.Join(newPath, "Unknow"))
-			}
-			imageSavepath := filepath.Join(newPath, fmt.Sprintf("%s\\%d.jpg", folder, timestamp))
-			ioutil.WriteFile(imageSavepath, data[12:len(data)], 0644)
-			clearZero = timestamp
 		case <-time.After(8 * time.Second):
 			if clearZero != 0 {
 				fmt.Println("-------clear-------")
@@ -94,7 +105,7 @@ func encode(c chan []byte, encode chan string, outputpath string) {
 
 				// add the new folder to encode thread
 				if newfolder != "" {
-					encode <- newfolder
+					preEncoded <- newfolder
 					newfolder = ""
 				}
 			}

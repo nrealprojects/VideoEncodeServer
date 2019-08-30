@@ -112,7 +112,7 @@ func kickIllegalPicture(rgbinput, virtualinput string) {
 		return
 	}
 	virtualfiles, err := fileUtils.GetAllFile(virtualinput)
-	if err != nil {
+	if err != nil || virtualfiles == nil || len(virtualfiles) == 0 {
 		fmt.Println("Can not get any files:", err, " in path:", virtualinput)
 		return
 	}

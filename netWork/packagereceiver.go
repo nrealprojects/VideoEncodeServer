@@ -8,7 +8,7 @@ import (
 var (
 	dataSizePerFrame = 1024
 	// CompletPackageCh ： CompletPackageCh
-	CompletPackageCh = make(chan []byte, 1024*1024)
+	CompletPackageCh = make(chan FrameData, 1024)
 )
 
 // ReciveMsg : 接收服务器数据
@@ -36,7 +36,7 @@ func reciveMsg(ch chan []byte) {
 					// join the packlist to a full package and clear the packlist
 					packlist = append(packlist, pack)
 					fullpack := joinPackData(packlist)
-					if fullpack != nil {
+					if fullpack.TimeStamp != 0 {
 						CompletPackageCh <- fullpack
 						// fmt.Println("Success get a full package.")
 					} else {
@@ -53,7 +53,7 @@ func reciveMsg(ch chan []byte) {
 }
 
 // JoinPackData ：joint pack list
-func joinPackData(list []PackData) []byte {
+func joinPackData(list []PackData) FrameData {
 	// fmt.Println("JoinPackData list count:", len(list))
 	framesize := 0
 	var frameBuffer []byte
@@ -64,10 +64,15 @@ func joinPackData(list []PackData) []byte {
 		buffer.Write(data.Data)
 	}
 	frameBuffer = buffer.Bytes()
-
-	// fmt.Println("join the packages frame size:", framesize, "real len:", len(frameBuffer))
-	if framesize != len(frameBuffer) {
-		return nil
+	frame := FrameData{
+		Imagetype: -1,
+		TimeStamp: 0,
+		Data:      nil,
 	}
-	return frameBuffer
+	//fmt.Println("join the packages frame size:", framesize, "real len:", len(frameBuffer))
+	if framesize == len(frameBuffer) {
+		frame.Init(frameBuffer)
+		fmt.Println(frame.ToString())
+	}
+	return frame
 }
